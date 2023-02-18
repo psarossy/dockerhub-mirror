@@ -12,27 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: alpine
-            repo: docker.io
-          - image: busybox
-            repo: docker.io
-          - image: debian
-            repo: docker.io
-          - image: golang
-            repo: docker.io
-          - image: kubectl
-            repo: quay.io/zenlab
-          - image: mysql
-            repo: docker.io
-          - image: node
-            repo: docker.io
-          - image: openjdk
-            repo: docker.io
-          - image: postgres
-            repo: docker.io
-          - image: python
-            repo: docker.io
-          - image: rust
+          - image: adguardhome
             repo: docker.io
     steps:
       - uses: actions/checkout@v3
