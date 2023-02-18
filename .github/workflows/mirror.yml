@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: adguardhome
+          - image: adguard/adguardhome
             repo: docker.io
     steps:
       - uses: actions/checkout@v3
