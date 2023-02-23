@@ -5,8 +5,8 @@ DockerHub Mirror on Github powered by Github Actions and [Crane](https://github.
 GitHub Actions scheduled to run daily at Midnight UTC to mirror some images to [GHCR.io](https://ghcr.io), bypassing rate limits
 
 Mirrored Images:
-* [`adguardhome`](https://ghcr.io/psarossy/adguardhome)
-* [`mealie`](https://ghcr.io/psarossy/mealie)
+* [`adguardhome`](https://ghcr.io/psarossy/adguard%2Fadguardhome)
+* [`mealie`](https://ghcr.io/psarossy/hkotel%2Fmealie)
 
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
