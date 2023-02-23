@@ -36,6 +36,8 @@ jobs:
             repo: docker.io
           - image: grafana/grafana
             repo: docker.io
+          - image: grafana/grafana-image-renderer
+            repo: docker.io
           - image: rook/ceph
             repo: docker.io
           - image: dperson/samba
