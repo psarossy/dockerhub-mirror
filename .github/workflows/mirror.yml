@@ -40,6 +40,8 @@ jobs:
             repo: docker.io
           - image: dperson/samba
             repo: docker.io
+          - image: elasticsearch
+            repo: docker.io
     steps:
       - uses: actions/checkout@v3
       - uses: docker/login-action@v2
