@@ -11,6 +11,7 @@ Mirrored Images:
 * [`traefik-forward-auth`](https://ghcr.io/psarossy/thomseddon%2Ftraefik-forward-auth)
 * [`mariadb`](https://ghcr.io/psarossy/mariadb)
 * [`haproxy`](https://ghcr.io/psarossy/haproxy)
+* [`osixia/keepalived`](https://ghcr.io/psarossy/osixia%2Fkeepalived)
 
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
