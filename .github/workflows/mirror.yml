@@ -20,6 +20,8 @@ jobs:
             repo: docker.io
           - image: mysql
             repo: docker.io
+          - image: thomseddon/traefik-forward-auth
+            repo: docker.io
     steps:
       - uses: actions/checkout@v3
       - uses: docker/login-action@v2
