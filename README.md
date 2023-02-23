@@ -9,6 +9,8 @@ Mirrored Images:
 * [`mealie`](https://ghcr.io/psarossy/hkotel%2Fmealie)
 * [`vaultwarden`](https://ghcr.io/psarossy/vaultwarden%2Fserver)
 * [`traefik-forward-auth`](https://ghcr.io/psarossy/thomseddon%2Ftraefik-forward-auth)
+* [`mariadb`](https://ghcr.io/psarossy/mariadb)
+
 
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
