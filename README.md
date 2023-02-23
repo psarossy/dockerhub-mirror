@@ -13,6 +13,11 @@ Mirrored Images:
 * [`haproxy`](https://ghcr.io/psarossy/haproxy)
 * [`osixia/keepalived`](https://ghcr.io/psarossy/osixia%2Fkeepalived)
 
+* [`grafana`](https://ghcr.io/psarossy/grafana%2Fgrafana)
+* [`grafana-image-renderer`](https://ghcr.io/psarossy/grafana%2Fgrafana-image-renderer)
+* [`influxdb`](https://ghcr.io/psarossy/influxdb)
+* [`chronograf`](https://ghcr.io/psarossy/chronograf)
+* [`telegraf`](https://ghcr.io/psarossy/telegraf)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub

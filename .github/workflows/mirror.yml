@@ -28,7 +28,14 @@ jobs:
             repo: docker.io
           - image: osixia/keepalived
             repo: docker.io
-
+          - image: chronograf
+            repo: docker.io  
+          - image: influxdb
+            repo: docker.io
+          - image: telegraf
+            repo: docker.io
+          - image: grafana/grafana
+            repo: docker.io
     steps:
       - uses: actions/checkout@v3
       - uses: docker/login-action@v2
