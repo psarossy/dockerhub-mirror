@@ -20,6 +20,7 @@ Mirrored Images:
 * [`rook/ceph`](https://ghcr.io/psarossy/rook%2Fceph)
 * [`dperson/samba`](https://ghcr.io/psarossy/dperson%2Fsamba)
 * [`elasticsearch`](https://ghcr.io/psarossy/elasticsearch)
+* [`browserless/chrome`](https://ghcr.io/psarossy/browserless/chrome)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub
