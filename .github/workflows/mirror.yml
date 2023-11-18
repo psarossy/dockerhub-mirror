@@ -46,6 +46,8 @@ jobs:
             repo: docker.io
           - image: browserless/chrome
             repo: docker.io
+          - image: louislam/uptime-kuma
+            repo: docker.io
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
