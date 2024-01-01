@@ -60,6 +60,10 @@ jobs:
             repo: docker.io
           - image: f0rc3/barcodebuddy
             repo: docker.io
+          - image: mikenye/piaware
+            repo: docker.io
+          - image: mikenye/fr24feed
+            repo: docker.io
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
