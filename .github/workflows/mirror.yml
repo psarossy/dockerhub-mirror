@@ -58,6 +58,8 @@ jobs:
             repo: docker.io
           - image: psarossy/speedtest-influxdb
             repo: docker.io
+          - image: f0rc3/barcodebuddy
+            repo: docker.io
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3

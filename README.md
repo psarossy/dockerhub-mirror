@@ -27,6 +27,7 @@ Mirrored Images:
 * [`housewrecker/gaps`](https://ghcr.io/psarossy/housewrecker/gaps)
 * [`psarossy/btmon-influx`](https://ghcr.io/psarossy/psarossy/btmon-influx)
 * [`psarossy/speedtest-influxdb`](https://ghcr.io/psarossy/psarossy/speedtest-influxdb)
+* [`f0rc3/barcodebuddy`](https://ghcr.io/psarossy/f0rc3/barcodebuddy)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub
