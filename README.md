@@ -22,6 +22,11 @@ Mirrored Images:
 * [`elasticsearch`](https://ghcr.io/psarossy/elasticsearch)
 * [`browserless/chrome`](https://ghcr.io/psarossy/browserless/chrome)
 * [`louislam/uptime-kuma`](https://ghcr.io/psarossy/louislam/uptime-kuma)
+* [`golift/unifi-poller`](https://ghcr.io/psarossy/golift/unifi-poller)
+* [`openspeedtest/latest`](https://ghcr.io/psarossy/openspeedtest/latest)
+* [`housewrecker/gaps`](https://ghcr.io/psarossy/housewrecker/gaps)
+* [`psarossy/btmon-influx`](https://ghcr.io/psarossy/psarossy/btmon-influx)
+* [`psarossy/speedtest-influxdb`](https://ghcr.io/psarossy/psarossy/speedtest-influxdb)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub

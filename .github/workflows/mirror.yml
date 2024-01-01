@@ -48,6 +48,16 @@ jobs:
             repo: docker.io
           - image: louislam/uptime-kuma
             repo: docker.io
+          - image: golift/unifi-poller
+            repo: docker.io
+          - image: openspeedtest/latest
+            repo: docker.io
+          - image: housewrecker/gaps
+            repo: docker.io
+          - image: psarossy/btmon-influx
+            repo: docker.io
+          - image: psarossy/speedtest-influxdb
+            repo: docker.io
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
