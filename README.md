@@ -30,6 +30,9 @@ Mirrored Images:
 * [`f0rc3/barcodebuddy`](https://ghcr.io/psarossy/f0rc3/barcodebuddy)
 * [`mikenye/piaware`](https://ghcr.io/psarossy/mikenye/piaware)
 * [`mikenye/fr24feed`](https://ghcr.io/psarossy/mikenye/fr24feed)
+* [`redis`](https://ghcr.io/psarossy/redis)
+* [`vikunja/frontend`](https://ghcr.io/psarossy/vikunja/frontend)
+* [`vikunja/api`](https://ghcr.io/psarossy/vikunja/api)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub
