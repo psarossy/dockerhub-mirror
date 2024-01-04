@@ -33,6 +33,7 @@ Mirrored Images:
 * [`redis`](https://ghcr.io/psarossy/redis)
 * [`vikunja/frontend`](https://ghcr.io/psarossy/vikunja/frontend)
 * [`vikunja/api`](https://ghcr.io/psarossy/vikunja/api)
+* [`nginx`](https://ghcr.io/psarossy/nginx)
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"
 [github-actions-link]: https://github.com/psarossy/dockerhub-mirror/actions?query=workflow%3AMirror%20Dockerhub
