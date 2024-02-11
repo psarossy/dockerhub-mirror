@@ -70,6 +70,8 @@ jobs:
             repo: docker.io
           - image: vikunja/api
             repo: docker.io
+          - image: vikunja/vikunja
+            repo: docker.io
           - image: nginx
             repo: docker.io
     steps:
