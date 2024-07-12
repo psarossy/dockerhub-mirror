@@ -88,6 +88,7 @@ jobs:
       - uses: imjasonh/setup-crane@v0.4
       - name: Mirror
         run: |
+          echo "${DOCKERHUB_RO}" | crane auth login https://docker.io --username psarossy --password-stdin
           for tag in $(cat ./images/${{ matrix.image }}); do
             crane copy \
               ${{ matrix.repo }}/${{ matrix.image }}:$tag \
