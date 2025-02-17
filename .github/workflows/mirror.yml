@@ -80,7 +80,7 @@ jobs:
             repo: docker.io
           - image: postgres
             repo: docker.io
-          - image: postgis
+          - image: postgis/postgis
             repo: docker.io
             
 
