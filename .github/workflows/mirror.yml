@@ -76,6 +76,11 @@ jobs:
             repo: docker.io
           - image: n8nio/n8n
             repo: docker.n8n.io
+          - image: freikin/dawarich
+            repo: docker.n8n.io
+          - image: postgres
+            repo: docker.n8n.io
+            
 
     steps:
       - uses: actions/checkout@v4
