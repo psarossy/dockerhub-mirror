@@ -80,6 +80,8 @@ jobs:
             repo: docker.io
           - image: postgres
             repo: docker.io
+          - image: postgis
+            repo: docker.io
             
 
     steps:
