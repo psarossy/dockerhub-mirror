@@ -77,9 +77,9 @@ jobs:
           - image: n8nio/n8n
             repo: docker.n8n.io
           - image: freikin/dawarich
-            repo: docker.n8n.io
+            repo: docker.io
           - image: postgres
-            repo: docker.n8n.io
+            repo: docker.io
             
 
     steps:
