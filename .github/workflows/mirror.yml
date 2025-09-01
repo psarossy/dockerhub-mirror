@@ -6,85 +6,24 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
+  get-images:
+    name: Get Images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: set-matrix
+        run: |
+          echo "matrix=$(find images -type f -printf '%P\n' | jq -R '{"image": .}' | jq -cs '{"include": .}')" >> $GITHUB_OUTPUT
+
   mirror:
     name: Mirror
+    needs: get-images
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include:
-          - image: adguard/adguardhome
-            repo: docker.io
-          - image: hkotel/mealie
-            repo: docker.io
-          - image: vaultwarden/server
-            repo: docker.io
-          - image: mysql
-            repo: docker.io
-          - image: mariadb
-            repo: docker.io
-          - image: thomseddon/traefik-forward-auth
-            repo: docker.io
-          - image: haproxy
-            repo: docker.io
-          - image: osixia/keepalived
-            repo: docker.io
-          - image: chronograf
-            repo: docker.io  
-          - image: influxdb
-            repo: docker.io
-          - image: telegraf
-            repo: docker.io
-          - image: grafana/grafana
-            repo: docker.io
-          - image: grafana/grafana-image-renderer
-            repo: docker.io
-          - image: rook/ceph
-            repo: docker.io
-          - image: dperson/samba
-            repo: docker.io
-          - image: elasticsearch
-            repo: docker.io
-          - image: browserless/chrome
-            repo: docker.io
-          - image: louislam/uptime-kuma
-            repo: docker.io
-          - image: golift/unifi-poller
-            repo: docker.io
-          - image: openspeedtest/latest
-            repo: docker.io
-          - image: housewrecker/gaps
-            repo: docker.io
-          - image: psarossy/btmon-influx
-            repo: docker.io
-          - image: psarossy/speedtest-influxdb
-            repo: docker.io
-          - image: f0rc3/barcodebuddy
-            repo: docker.io
-          - image: mikenye/piaware
-            repo: docker.io
-          - image: mikenye/fr24feed
-            repo: docker.io
-          - image: redis
-            repo: docker.io
-          - image: vikunja/frontend
-            repo: docker.io
-          - image: vikunja/api
-            repo: docker.io
-          - image: vikunja/vikunja
-            repo: docker.io
-          - image: nginx
-            repo: docker.io
-          - image: n8nio/n8n
-            repo: docker.n8n.io
-          - image: freikin/dawarich
-            repo: docker.io
-          - image: postgres
-            repo: docker.io
-          - image: postgis/postgis
-            repo: docker.io
-          - image: nodered/node-red
-            repo: docker.io
-            
+      matrix: ${{ fromJson(needs.get-images.outputs.matrix) }}
+      fail-fast: false # Allows other jobs to continue if one fails
 
     steps:
       - uses: actions/checkout@v5
@@ -94,12 +33,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
       - uses: actions/setup-go@v5
+        with:
+          cache: false # Prevents the "go.sum not found" warning
       - uses: imjasonh/setup-crane@v0.4
       - name: Mirror
         run: |
+          repo="docker.io"
+          if [[ "${{ matrix.image }}" == "n8nio/n8n" ]]; then
+            repo="docker.n8n.io"
+          fi
+          
+          echo "Mirroring tags for ${{ matrix.image }} from $repo"
           echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
+
           for tag in $(cat ./images/${{ matrix.image }}); do
-            crane copy \
-              ${{ matrix.repo }}/${{ matrix.image }}:$tag \
-              ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag
+            SRC_IMAGE="$repo/${{ matrix.image }}:$tag"
+            DEST_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag"
+
+            # Get the digest of the source image.
+            SRC_DIGEST=$(crane digest $SRC_IMAGE)
+
+            # Get the digest of the destination image. 
+            # Redirect stderr to /dev/null and use '|| true' to prevent the script from exiting
+            # if the destination image does not exist.
+            DEST_DIGEST=$(crane digest $DEST_IMAGE 2>/dev/null || true)
+
+            if [ "$SRC_DIGEST" != "$DEST_DIGEST" ]; then
+              echo "  - Copying tag: $tag (Digest differs or does not exist at destination)"
+              crane copy "$SRC_IMAGE" "$DEST_IMAGE"
+            else
+              echo "  - Skipping tag: $tag (Digest is unchanged)"
+            fi
+
           done
