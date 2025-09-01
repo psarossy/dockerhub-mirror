@@ -32,9 +32,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      - uses: actions/setup-go@
+      - uses: actions/setup-go@v5
         with:
-          cache: false
+          cache: false # Prevents the "go.sum not found" warning
       - uses: imjasonh/setup-crane@v0.4
       - name: Mirror
         run: |
@@ -44,6 +44,8 @@ jobs:
           fi
           
           echo "Mirroring tags for ${{ matrix.image }} from $repo"
+          echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
+
           for tag in $(cat ./images/${{ matrix.image }}); do
             SRC_IMAGE="$repo/${{ matrix.image }}:$tag"
             DEST_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag"
@@ -58,7 +60,6 @@ jobs:
 
             if [ "$SRC_DIGEST" != "$DEST_DIGEST" ]; then
               echo "  - Copying tag: $tag (Digest differs or does not exist at destination)"
-              echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
               crane copy "$SRC_IMAGE" "$DEST_IMAGE"
             else
               echo "  - Skipping tag: $tag (Digest is unchanged)"
