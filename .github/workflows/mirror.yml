@@ -44,10 +44,24 @@ jobs:
           fi
           
           echo "Mirroring tags for ${{ matrix.image }} from $repo"
-
-          echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
           for tag in $(cat ./images/${{ matrix.image }}); do
-            crane copy \
-              $repo/${{ matrix.image }}:$tag \
-              ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag
+            SRC_IMAGE="$repo/${{ matrix.image }}:$tag"
+            DEST_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag"
+
+            # Get the digest of the source image.
+            SRC_DIGEST=$(crane digest $SRC_IMAGE)
+
+            # Get the digest of the destination image. 
+            # Redirect stderr to /dev/null and use '|| true' to prevent the script from exiting
+            # if the destination image does not exist.
+            DEST_DIGEST=$(crane digest $DEST_IMAGE 2>/dev/null || true)
+
+            if [ "$SRC_DIGEST" != "$DEST_DIGEST" ]; then
+              echo "  - Copying tag: $tag (Digest differs or does not exist at destination)"
+              echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
+              crane copy "$SRC_IMAGE" "$DEST_IMAGE"
+            else
+              echo "  - Skipping tag: $tag (Digest is unchanged)"
+            fi
+
           done
