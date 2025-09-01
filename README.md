@@ -36,6 +36,7 @@ Mirrored Images:
 * [`vikunja/vikunja`](https://ghcr.io/psarossy/vikunja/vikunja)
 * [`nginx`](https://ghcr.io/psarossy/nginx)
 * [`n8n`](https://docker.n8n.io/n8nio/n8n)
+* [`nodered](https://ghcr.io/psarossy/nodered/node-red)
 
 
 [github-actions-badge]: https://img.shields.io/github/actions/workflow/status/psarossy/dockerhub-mirror/mirror.yml?branch=master "Github Workflow Status (master)"

@@ -82,6 +82,8 @@ jobs:
             repo: docker.io
           - image: postgis/postgis
             repo: docker.io
+          - image: nodered/node-red
+            repo: docker.io
             
 
     steps:
