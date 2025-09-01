@@ -6,85 +6,20 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
+  get-images:
+    name: Get Images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"include\":[$(ls -d images/* | awk -F/ '{printf "{\"image\":\"%s/%s\"},", $2, $3}')]}" | sed 's/,$//'
   mirror:
     name: Mirror
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include:
-          - image: adguard/adguardhome
-            repo: docker.io
-          - image: hkotel/mealie
-            repo: docker.io
-          - image: vaultwarden/server
-            repo: docker.io
-          - image: mysql
-            repo: docker.io
-          - image: mariadb
-            repo: docker.io
-          - image: thomseddon/traefik-forward-auth
-            repo: docker.io
-          - image: haproxy
-            repo: docker.io
-          - image: osixia/keepalived
-            repo: docker.io
-          - image: chronograf
-            repo: docker.io  
-          - image: influxdb
-            repo: docker.io
-          - image: telegraf
-            repo: docker.io
-          - image: grafana/grafana
-            repo: docker.io
-          - image: grafana/grafana-image-renderer
-            repo: docker.io
-          - image: rook/ceph
-            repo: docker.io
-          - image: dperson/samba
-            repo: docker.io
-          - image: elasticsearch
-            repo: docker.io
-          - image: browserless/chrome
-            repo: docker.io
-          - image: louislam/uptime-kuma
-            repo: docker.io
-          - image: golift/unifi-poller
-            repo: docker.io
-          - image: openspeedtest/latest
-            repo: docker.io
-          - image: housewrecker/gaps
-            repo: docker.io
-          - image: psarossy/btmon-influx
-            repo: docker.io
-          - image: psarossy/speedtest-influxdb
-            repo: docker.io
-          - image: f0rc3/barcodebuddy
-            repo: docker.io
-          - image: mikenye/piaware
-            repo: docker.io
-          - image: mikenye/fr24feed
-            repo: docker.io
-          - image: redis
-            repo: docker.io
-          - image: vikunja/frontend
-            repo: docker.io
-          - image: vikunja/api
-            repo: docker.io
-          - image: vikunja/vikunja
-            repo: docker.io
-          - image: nginx
-            repo: docker.io
-          - image: n8nio/n8n
-            repo: docker.n8n.io
-          - image: freikin/dawarich
-            repo: docker.io
-          - image: postgres
-            repo: docker.io
-          - image: postgis/postgis
-            repo: docker.io
-          - image: nodered/node-red
-            repo: docker.io
-            
+      matrix: ${{ fromJson(needs.get-images.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v5
