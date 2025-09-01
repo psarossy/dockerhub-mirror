@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"include\":[$(ls -d images/* | awk -F/ '{printf "{\"image\":\"%s/%s\"},", $2, $3}')]}" | sed 's/,$//'
+        run: |
+          echo "matrix=$(find images -type f -printf '{"image":"%P"},' | tr -d '\n' | sed 's/,$//' | xargs -I {} echo '{"include":[{}]}')" >> $GITHUB_OUTPUT
+
   mirror:
     name: Mirror
     runs-on: ubuntu-latest
