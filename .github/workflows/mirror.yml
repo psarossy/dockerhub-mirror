@@ -19,9 +19,11 @@ jobs:
 
   mirror:
     name: Mirror
+    needs: get-images
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.get-images.outputs.matrix) }}
+      fail-fast: false # Allows other jobs to continue if one fails
 
     steps:
       - uses: actions/checkout@v5
@@ -34,9 +36,16 @@ jobs:
       - uses: imjasonh/setup-crane@v0.4
       - name: Mirror
         run: |
+          repo="docker.io"
+          if [[ "${{ matrix.image }}" == "n8nio/n8n" ]]; then
+            repo="docker.n8n.io"
+          fi
+          
+          echo "Mirroring tags for ${{ matrix.image }} from $repo"
+
           echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
           for tag in $(cat ./images/${{ matrix.image }}); do
             crane copy \
-              ${{ matrix.repo }}/${{ matrix.image }}:$tag \
+              $repo/${{ matrix.image }}:$tag \
               ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag
           done
