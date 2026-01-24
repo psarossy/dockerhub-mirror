@@ -42,27 +42,133 @@ jobs:
           if [[ "${{ matrix.image }}" == "n8nio/n8n" ]]; then
             repo="docker.n8n.io"
           fi
-          
-          echo "Mirroring tags for ${{ matrix.image }} from $repo"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Mirroring: ${{ matrix.image }}"
+          echo "Source: $repo/${{ matrix.image }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+
           echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
 
+          # Initialize counters
+          TOTAL=0
+          COPIED=0
+          SKIPPED=0
+          FAILED=0
+
           for tag in $(cat ./images/${{ matrix.image }}); do
+            TOTAL=$((TOTAL + 1))
             SRC_IMAGE="$repo/${{ matrix.image }}:$tag"
             DEST_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:$tag"
 
-            # Get the digest of the source image.
-            SRC_DIGEST=$(crane digest $SRC_IMAGE)
+            echo "Processing tag: $tag"
 
-            # Get the digest of the destination image. 
-            # Redirect stderr to /dev/null and use '|| true' to prevent the script from exiting
-            # if the destination image does not exist.
+            # Get the digest of the source image with retry logic
+            RETRY_COUNT=0
+            MAX_RETRIES=3
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              SRC_DIGEST=$(crane digest $SRC_IMAGE 2>&1) && break
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "  ⚠️  Failed to get source digest, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+                sleep $((2 ** RETRY_COUNT))
+              else
+                echo "  ❌ Failed to get source digest after $MAX_RETRIES attempts"
+                FAILED=$((FAILED + 1))
+                continue
+              fi
+            done
+
+            # Get the digest of the destination image
             DEST_DIGEST=$(crane digest $DEST_IMAGE 2>/dev/null || true)
 
             if [ "$SRC_DIGEST" != "$DEST_DIGEST" ]; then
-              echo "  - Copying tag: $tag (Digest differs or does not exist at destination)"
-              crane copy "$SRC_IMAGE" "$DEST_IMAGE"
-            else
-              echo "  - Skipping tag: $tag (Digest is unchanged)"
-            fi
+              echo "  📦 Copying (digest differs or doesn't exist at destination)"
 
+              # Copy with retry logic
+              RETRY_COUNT=0
+              while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                if crane copy "$SRC_IMAGE" "$DEST_IMAGE" 2>&1; then
+                  echo "  ✅ Successfully copied"
+                  COPIED=$((COPIED + 1))
+                  break
+                fi
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "  ⚠️  Copy failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+                  sleep $((2 ** RETRY_COUNT))
+                else
+                  echo "  ❌ Failed to copy after $MAX_RETRIES attempts"
+                  FAILED=$((FAILED + 1))
+                fi
+              done
+            else
+              echo "  ⏭️  Skipped (digest unchanged)"
+              SKIPPED=$((SKIPPED + 1))
+            fi
+            echo ""
           done
+
+          # Print summary
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Summary for ${{ matrix.image }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Total tags: $TOTAL"
+          echo "✅ Copied: $COPIED"
+          echo "⏭️  Skipped: $SKIPPED"
+          echo "❌ Failed: $FAILED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Write to job summary
+          echo "### Mirror Results: \`${{ matrix.image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Tags | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Copied | $COPIED |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+          echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Exit with error if any tags failed
+          if [ $FAILED -gt 0 ]; then
+            echo "::error::Failed to mirror $FAILED tag(s) for ${{ matrix.image }}"
+            exit 1
+          fi
+
+  summary:
+    name: Mirror Summary
+    needs: [get-images, mirror]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# DockerHub Mirror - Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Determine overall status
+          if [ "${{ needs.mirror.result }}" == "success" ]; then
+            echo "## ✅ Overall Status: Success" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All images mirrored successfully!" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.mirror.result }}" == "failure" ]; then
+            echo "## ❌ Overall Status: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some images failed to mirror. Check individual job logs for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ⚠️ Overall Status: Partial" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Workflow completed with some issues." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for failures
+        if: needs.mirror.result == 'failure'
+        run: |
+          echo "::warning::Some images failed to mirror. Check the job summaries above for details."
+          exit 0  # Don't fail the summary job

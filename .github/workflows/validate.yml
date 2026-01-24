@@ -1,0 +1,125 @@
+name: Validate Image Files
+
+on:
+  pull_request:
+    paths:
+      - 'images/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check for trailing whitespace
+        run: |
+          echo "Checking for trailing whitespace in image files..."
+          if find images -type f -exec grep -l ' $' {} \; | grep -q .; then
+            echo "❌ Found trailing whitespace in the following files:"
+            find images -type f -exec grep -l ' $' {} \;
+            exit 1
+          else
+            echo "✅ No trailing whitespace found"
+          fi
+
+      - name: Check for final newline
+        run: |
+          echo "Checking for final newline in image files..."
+          missing_newline=0
+          while IFS= read -r file; do
+            if [ -n "$(tail -c 1 "$file")" ]; then
+              echo "❌ Missing final newline: $file"
+              missing_newline=1
+            fi
+          done < <(find images -type f)
+
+          if [ $missing_newline -eq 0 ]; then
+            echo "✅ All files have final newline"
+          else
+            exit 1
+          fi
+
+      - name: Check for duplicate tags
+        run: |
+          echo "Checking for duplicate tags in image files..."
+          has_duplicates=0
+          while IFS= read -r file; do
+            # Remove empty lines and check for duplicates
+            duplicates=$(grep -v '^[[:space:]]*$' "$file" | sort | uniq -d)
+            if [ -n "$duplicates" ]; then
+              echo "❌ Found duplicate tags in $file:"
+              echo "$duplicates"
+              has_duplicates=1
+            fi
+          done < <(find images -type f)
+
+          if [ $has_duplicates -eq 0 ]; then
+            echo "✅ No duplicate tags found"
+          else
+            exit 1
+          fi
+
+      - name: Check for empty files
+        run: |
+          echo "Checking for empty image files..."
+          has_empty=0
+          while IFS= read -r file; do
+            # Check if file has no content (ignoring whitespace)
+            if ! grep -q '[^[:space:]]' "$file"; then
+              echo "❌ Empty or whitespace-only file: $file"
+              has_empty=1
+            fi
+          done < <(find images -type f)
+
+          if [ $has_empty -eq 0 ]; then
+            echo "✅ No empty files found"
+          else
+            exit 1
+          fi
+
+      - name: Validate file naming
+        run: |
+          echo "Validating file naming conventions..."
+          has_invalid=0
+          while IFS= read -r file; do
+            filename=$(basename "$file")
+            # Check for uppercase letters
+            if [[ "$filename" =~ [A-Z] ]]; then
+              echo "❌ Uppercase letters found in filename: $file"
+              has_invalid=1
+            fi
+            # Check for spaces
+            if [[ "$filename" =~ [[:space:]] ]]; then
+              echo "❌ Spaces found in filename: $file"
+              has_invalid=1
+            fi
+          done < <(find images -type f)
+
+          if [ $has_invalid -eq 0 ]; then
+            echo "✅ All filenames follow conventions"
+          else
+            exit 1
+          fi
+
+      - name: Test matrix generation
+        run: |
+          echo "Testing matrix generation (simulating workflow)..."
+          matrix=$(find images -type f -printf '%P\n' | jq -R '{"image": .}' | jq -cs '{"include": .}')
+          echo "Generated matrix:"
+          echo "$matrix" | jq '.'
+
+          # Count images
+          count=$(echo "$matrix" | jq '.include | length')
+          echo "✅ Successfully generated matrix with $count images"
+
+      - name: Validation summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ All validation checks passed!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Image files are ready for mirroring."
+          echo "Total images: $(find images -type f | wc -l)"

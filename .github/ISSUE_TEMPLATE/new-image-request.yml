@@ -1,0 +1,68 @@
+name: New Image Request
+description: Request a new Docker image to be mirrored to GHCR.io
+title: "[New Image]: "
+labels: ["new-image"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for requesting a new image to mirror! Please provide the following information.
+
+  - type: input
+    id: image-name
+    attributes:
+      label: Docker Image Name
+      description: The full Docker image name (e.g., nginx, grafana/grafana, hashicorp/terraform)
+      placeholder: "nginx"
+    validations:
+      required: true
+
+  - type: textarea
+    id: tags
+    attributes:
+      label: Tags to Mirror
+      description: List the tags you want to mirror (one per line). Include at least "latest" if applicable.
+      placeholder: |
+        latest
+        1.25
+        alpine
+    validations:
+      required: true
+
+  - type: dropdown
+    id: image-type
+    attributes:
+      label: Image Type
+      description: Is this an official Docker image or a namespaced image?
+      options:
+        - Official (single-word name like nginx, alpine, postgres)
+        - Namespaced (publisher/image like grafana/grafana)
+    validations:
+      required: true
+
+  - type: input
+    id: registry
+    attributes:
+      label: Custom Registry (if applicable)
+      description: If this image uses a custom registry (not docker.io), specify it here
+      placeholder: "docker.n8n.io"
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Why should this image be mirrored?
+      description: Brief explanation of why this image is useful to mirror
+      placeholder: "This image is frequently used in my homelab and I hit Docker Hub rate limits"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: verification
+    attributes:
+      label: Verification
+      description: Please confirm the following
+      options:
+        - label: I have verified this image exists on Docker Hub (or specified registry)
+          required: true
+        - label: I have checked that this image is not already being mirrored
+          required: true
