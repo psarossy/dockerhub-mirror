@@ -171,6 +171,35 @@ jobs:
             echo "Workflow completed with some issues." >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Notify Discord
+        if: vars.DISCORD_CI_WEBHOOK != ''
+        env:
+          WEBHOOK_URL: ${{ vars.DISCORD_CI_WEBHOOK }}
+          MIRROR_RESULT: ${{ needs.mirror.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$MIRROR_RESULT" == "success" ]; then
+            COLOR=3066993  # green
+            TITLE="Mirror #${RUN_NUMBER} succeeded"
+            DESC="All images mirrored successfully."
+          else
+            COLOR=15158332  # red
+            TITLE="Mirror #${RUN_NUMBER} failed"
+            DESC="Some images failed to mirror. Check logs for details."
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg desc "$DESC" \
+            --arg url "$RUN_URL" \
+            --arg trigger "$EVENT_NAME" \
+            --argjson color "$COLOR" \
+            '{embeds: [{title: $title, description: $desc, url: $url, color: $color, footer: {text: ("Triggered by " + $trigger)}, timestamp: (now | todate)}]}')
+
+          curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+
       - name: Check for failures
         if: needs.mirror.result == 'failure'
         run: |
