@@ -2,6 +2,10 @@ name: Mirror Dockerhub
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'images/**'
   schedule:
     - cron: '0 0 * * *'
 
