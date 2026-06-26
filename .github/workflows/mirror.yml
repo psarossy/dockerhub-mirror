@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           cache: false # Prevents the "go.sum not found" warning
-      - uses: imjasonh/setup-crane@v0.5
+      - uses: imjasonh/setup-crane@v0.7
       - name: Mirror
         run: |
           repo="docker.io"
