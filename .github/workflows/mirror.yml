@@ -177,48 +177,114 @@ jobs:
     needs: [get-images, mirror]
     runs-on: ubuntu-latest
     if: always()
+    # actions:read is needed to count per-image job conclusions and to read the
+    # recent run history for the consecutive-failure streak below.
+    permissions:
+      actions: read
     steps:
-      - name: Generate Summary
+      # `needs.mirror.result` collapses a 73-job matrix into one word, so
+      # "3 of 73 images failed" and "the mirror is completely dead" produced an
+      # identical red alert. That ambiguity is why a nightly red alert went
+      # unactioned for ~8 weeks (2026-07-03 -> 2026-08-30): it always looked the
+      # same, so it stopped carrying information. Grade the severity by how many
+      # images actually failed, and name them.
+      - name: Collect results
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          echo "# DockerHub Mirror - Workflow Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Workflow Run:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          set -euo pipefail
 
-          # Determine overall status
-          if [ "${{ needs.mirror.result }}" == "success" ]; then
-            echo "## ✅ Overall Status: Success" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All images mirrored successfully!" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.mirror.result }}" == "failure" ]; then
-            echo "## ❌ Overall Status: Failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Some images failed to mirror. Check individual job logs for details." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## ⚠️ Overall Status: Partial" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Workflow completed with some issues." >> $GITHUB_STEP_SUMMARY
-          fi
+          gh api "/repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate \
+            --jq '.jobs[] | select(.name | startswith("Mirror (")) | [.conclusion, (.name | capture("Mirror \\((?<i>.*)\\)").i)] | @tsv' \
+            > jobs.tsv
+
+          TOTAL=$(wc -l < jobs.tsv | tr -d ' ')
+          FAILED_IMAGES=$(awk -F'\t' '$1 != "success" { print $2 }' jobs.tsv | sort)
+          FAILED=$(printf '%s' "$FAILED_IMAGES" | grep -c . || true)
+
+          # Consecutive failed runs BEFORE this one. The current run is still
+          # in_progress while this job executes, so it is absent from the list.
+          WF=$(gh api "/repos/${REPO}/actions/runs/${RUN_ID}" --jq '.workflow_id')
+          STREAK=$(gh api "/repos/${REPO}/actions/workflows/${WF}/runs?per_page=100&status=completed" \
+            --jq '[.workflow_runs[].conclusion]' \
+            | jq -r 'map(select(. != null)) | (index("success") // length)')
+
+          {
+            echo "total=${TOTAL}"
+            echo "failed=${FAILED}"
+            echo "streak=${STREAK}"
+            echo "failed_images<<EOF"
+            printf '%s\n' "${FAILED_IMAGES}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate Summary
+        env:
+          TOTAL: ${{ steps.collect.outputs.total }}
+          FAILED: ${{ steps.collect.outputs.failed }}
+          STREAK: ${{ steps.collect.outputs.streak }}
+          FAILED_IMAGES: ${{ steps.collect.outputs.failed_images }}
+        run: |
+          {
+            echo "# DockerHub Mirror - Workflow Summary"
+            echo ""
+            echo "**Workflow Run:** ${{ github.run_number }}"
+            echo "**Triggered by:** ${{ github.event_name }}"
+            echo "**Branch:** ${{ github.ref_name }}"
+            echo ""
+            if [ "$FAILED" -eq 0 ]; then
+              echo "## ✅ Success — all ${TOTAL} images mirrored"
+            elif [ "$FAILED" -ge "$TOTAL" ]; then
+              echo "## 🚨 TOTAL FAILURE — all ${TOTAL} images failed"
+              echo ""
+              echo "Every image failed. Suspect auth or a registry outage, not individual images."
+            else
+              echo "## ⚠️ Partial — ${FAILED} of ${TOTAL} images failed"
+            fi
+            if [ "$FAILED" -gt 0 ]; then
+              echo ""
+              echo "### Failed images"
+              printf '%s\n' "$FAILED_IMAGES" | sed 's/^/- `/; s/$/`/'
+              if [ "${STREAK:-0}" -gt 0 ]; then
+                echo ""
+                echo "**⏳ This has failed ${STREAK} consecutive run(s) before this one.**"
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Discord
         if: vars.DISCORD_CI_WEBHOOK != ''
         env:
           WEBHOOK_URL: ${{ vars.DISCORD_CI_WEBHOOK }}
-          MIRROR_RESULT: ${{ needs.mirror.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RUN_NUMBER: ${{ github.run_number }}
           EVENT_NAME: ${{ github.event_name }}
+          TOTAL: ${{ steps.collect.outputs.total }}
+          FAILED: ${{ steps.collect.outputs.failed }}
+          STREAK: ${{ steps.collect.outputs.streak }}
+          FAILED_IMAGES: ${{ steps.collect.outputs.failed_images }}
         run: |
-          if [ "$MIRROR_RESULT" == "success" ]; then
-            COLOR=3066993  # green
-            TITLE="Mirror #${RUN_NUMBER} succeeded"
+          if [ "$FAILED" -eq 0 ]; then
+            COLOR=3066993   # green
+            TITLE="✅ Mirror #${RUN_NUMBER} — all ${TOTAL} images OK"
             DESC="All images mirrored successfully."
-          else
+          elif [ "$FAILED" -ge "$TOTAL" ]; then
             COLOR=15158332  # red
-            TITLE="Mirror #${RUN_NUMBER} failed"
-            DESC="Some images failed to mirror. Check logs for details."
+            TITLE="🚨 Mirror #${RUN_NUMBER} — TOTAL FAILURE (${FAILED}/${TOTAL})"
+            DESC="Every image failed. Suspect auth or a registry outage, not individual images."
+          else
+            COLOR=16098851  # amber — a partial failure is not an outage
+            TITLE="⚠️ Mirror #${RUN_NUMBER} — ${FAILED} of ${TOTAL} images failed"
+            DESC="$(printf '%s\n' "$FAILED_IMAGES" | sed 's/^/• /')"
+          fi
+
+          # A repeat failure is a different problem from a first failure. Saying
+          # so in the title is what stops a recurring alert reading as routine.
+          if [ "${STREAK:-0}" -gt 0 ] && [ "$FAILED" -gt 0 ]; then
+            TITLE="${TITLE} — ${STREAK} runs in a row"
           fi
 
           PAYLOAD=$(jq -n \
@@ -230,9 +296,3 @@ jobs:
             '{embeds: [{title: $title, description: $desc, url: $url, color: $color, footer: {text: ("Triggered by " + $trigger)}, timestamp: (now | todate)}]}')
 
           curl -sf -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
-
-      - name: Check for failures
-        if: needs.mirror.result == 'failure'
-        run: |
-          echo "::warning::Some images failed to mirror. Check the job summaries above for details."
-          exit 0  # Don't fail the summary job
