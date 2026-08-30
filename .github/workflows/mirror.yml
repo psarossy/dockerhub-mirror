@@ -41,6 +41,9 @@ jobs:
           cache: false # Prevents the "go.sum not found" warning
       - uses: imjasonh/setup-crane@v0.5
       - name: Mirror
+        env:
+          DOCKERHUB_RO: ${{ secrets.DOCKERHUB_RO }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
           repo="docker.io"
           if [[ "${{ matrix.image }}" == "n8nio/n8n" ]]; then
@@ -53,7 +56,31 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
 
-          echo "${DOCKERHUB_RO}" | crane auth login registry.docker.com --username psarossy --password-stdin
+          # setup-crane ends with `crane auth login ghcr.io` using the ephemeral
+          # GITHUB_TOKEN, clobbering the GHCR_PAT credential that
+          # docker/login-action wrote above. GITHUB_TOKEN can only write packages
+          # linked to this repo, so packages with no repo linkage (copyparty/ac,
+          # vimagick/tinyproxy) fail with 403 / DENIED. Re-assert GHCR_PAT here.
+          if [[ -z "${GHCR_PAT}" ]]; then
+            echo "::error::GHCR_PAT secret is empty — pushes to unlinked packages would fail"
+            exit 1
+          fi
+          echo "${GHCR_PAT}" | crane auth login ghcr.io --username "${{ github.repository_owner }}" --password-stdin
+
+          # Docker Hub credentials must be keyed to the host crane actually
+          # resolves (index.docker.io), not registry.docker.com. Without this,
+          # every pull is anonymous and eventually hits TOOMANYREQUESTS.
+          if [[ -z "${DOCKERHUB_RO}" ]]; then
+            echo "::error::DOCKERHUB_RO secret is empty — pulls would be anonymous and rate-limited"
+            exit 1
+          fi
+          echo "${DOCKERHUB_RO}" | crane auth login index.docker.io --username psarossy --password-stdin
+
+          # docker.n8n.io is a Docker Hub vanity domain; crane scopes auth per
+          # host, so it needs its own login or it stays anonymous.
+          if [[ "$repo" != "docker.io" ]]; then
+            echo "${DOCKERHUB_RO}" | crane auth login "$repo" --username psarossy --password-stdin
+          fi
 
           # Initialize counters
           TOTAL=0
@@ -71,8 +98,12 @@ jobs:
             # Get the digest of the source image with retry logic
             RETRY_COUNT=0
             MAX_RETRIES=3
+            # NB: `continue 2` skips to the next tag. A bare `continue` would only
+            # continue this inner retry loop, which then exits on its own
+            # condition and falls through to attempt a copy we know will fail --
+            # double-counting one tag as two failures.
             while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              SRC_DIGEST=$(crane digest $SRC_IMAGE 2>&1) && break
+              SRC_DIGEST=$(crane digest $SRC_IMAGE 2>/dev/null) && break
               RETRY_COUNT=$((RETRY_COUNT + 1))
               if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                 echo "  ⚠️  Failed to get source digest, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
@@ -80,7 +111,7 @@ jobs:
               else
                 echo "  ❌ Failed to get source digest after $MAX_RETRIES attempts"
                 FAILED=$((FAILED + 1))
-                continue
+                continue 2
               fi
             done
 
